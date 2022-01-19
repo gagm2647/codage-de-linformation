@@ -166,7 +166,10 @@ def rehaussementLPC(fs, s_fenetre, longueur_trame):
 
         predicted_signal_enveloppe.append(lab.lpc_window(signal_abs, ordre_filtre_lpc, longueur_trame))
 
-
+        #gossage sur les coefficients
+        signal_comprimee = predicted_signal_enveloppe[i][range(0, len(predicted_signal_enveloppe[i]), 2)]
+        signal_comprimee = zero_padding_debut_fin(signal_comprimee, len(signal_comprimee)//2, len(signal_comprimee)//2)
+        predicted_signal_enveloppe[i] = signal_comprimee
 
         if i % 15 == 0:
             plt.figure()
@@ -175,7 +178,6 @@ def rehaussementLPC(fs, s_fenetre, longueur_trame):
             plt.stem(np.abs(signal_freq))
             plt.plot(np.abs(s), 'b')
             plt.plot(predicted_signal_enveloppe[i], 'r')
-
             plt.legend(['Enveloppe spectrale du signal', 'Sortie LPC'])
         #     plt.plot(signal_abs)
         #     plt.plot(predicted_signal_enveloppe[i])
