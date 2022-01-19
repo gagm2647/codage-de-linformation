@@ -130,15 +130,17 @@ def fenetre_hanning(data_in, data_out, curr_window: int, window_size: int, hanni
 
     half_window = window_size // 2
     for i in range(0, window_size):
-        data_out.append(hanning[i] * data_in[curr_window * half_window + i])
-
+        if curr_window * half_window + i < len(data_in):
+            data_out.append(hanning[i] * data_in[curr_window * half_window + i])
+        else:
+            data_out.append(0)
 
 def overlap_filtering(signal, out, window_count, window_len, window):
     for i in range(0, window_count):
         y = []
 
         fenetre_hanning(data_in=signal, data_out=y, curr_window=i, window_size=window_len, hanning=window)
-
+        # out.append(y)
         # FFT
         fft_y = np.fft.fft(y)
         # plot_fft(fft_y)
@@ -249,9 +251,9 @@ def num_2():
     plt.plot(signal_cut_band_added)
 
     # Data convertion for wavfile
-    lpa = np.abs(np.array(signal_low_pass_added)).astype(np.float32)
-    hpa = np.abs(np.array(signal_high_pass_added)).astype(np.float32)
-    cba = np.abs(np.array(signal_cut_band_added)).astype(np.float32)
+    lpa = np.real(np.array(signal_low_pass_added)).astype(np.float32)
+    hpa = np.real(np.array(signal_high_pass_added)).astype(np.float32)
+    cba = np.real(np.array(signal_cut_band_added)).astype(np.float32)
 
     # Output sound file
     write_wav_file(lpa, 'signal_low_pass_added.wav', fs)
@@ -262,18 +264,36 @@ def num_2():
     return 1
 
 
-def lpc_window(signal, order: int):
-    a = librosa.lpc(signal, order)
-    b = np.hstack([[0], -1 * a[1:]])
-    y_hat = sc.lfilter(b, [1], signal)
+def lpc_window(signal, order: int, window_len: int):
+    a = librosa.lpc(signal, order)  # coefficient du filtre
+    i_a = 1/a  # inversion des coefficients
+    [fr, H] = sc.freqz(1, i_a, window_len//2)  # filtre sur la moitié de la trames
+    H = np.real(H)  # Module
+    Hdouble = np.concatenate((H, np.flipud(H)))  # flip et concaténation pour 0,2 pi
+    # Hdouble = 1/Hdouble
 
-    fig, ax = plt.subplots()
-    ax.plot(signal)
-    ax.plot(y_hat, linestyle='--')
-    ax.legend(['y', 'y_hat'])
-    ax.set_title('LP Model Forward Prediction')
-    return y_hat.copy()
+    # x = signal.copy()
+    # # x = x / max(x)
+    # Hdb = 20 * np.log10(H)
+    # signaldB = 20 * np.log10(x)
 
+    # fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
+    # half_len = len(fr)//2
+    # x = x[:half_len]
+    # fr = fr[:half_len]
+    # H = H[:half_len]
+    # Hdb = Hdb[:half_len]
+    # signaldB = signaldB[:half_len]
+    # ax1.plot(fr, x)
+    # ax2.plot(fr, np.abs(H))
+    # ax3.plot(fr, signaldB)
+    # ax4.plot(fr, Hdb)
+    # ax1.legend(['Signal'])
+    # ax2.legend(['LPC m = ' + str(order)])
+    # ax3.legend(['Signal dB'])
+    # ax4.legend(['LPC m = ' + str(order) + ' dB'])
+
+    return Hdouble.copy()
 
 def return_ech_number(time_in_ms: int, fs: int, N: int):
     f = 1000 / time_in_ms
@@ -281,12 +301,14 @@ def return_ech_number(time_in_ms: int, fs: int, N: int):
     return m
 
 def num_3(signal_avec_fenetre, fs, N):
-    m = 1  # filter order
+    m = 6  # filter order
 
     predicted_signal = []
-    for i in range(0, len(signal_avec_fenetre)):
+    for i in range(0, len(signal_avec_fenetre)//4):
         signal_abs = np.abs(signal_avec_fenetre[i])
         predicted_signal.append(lpc_window(signal_abs, m))
+        predicted_signal.append(lpc_window(signal_abs, m // 2))
+        predicted_signal.append(lpc_window(signal_abs, 2 * m))
 
     return 2
 
