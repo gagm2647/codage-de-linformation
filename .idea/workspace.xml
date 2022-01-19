@@ -5,13 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7e873f6c-c415-43ef-b8a7-552e77cf1853" name="Changes" comment="Project creation">
-      <change afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/laboratoire.py" beforeDir="false" afterPath="$PROJECT_DIR$/laboratoire.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/signal_cut_band_added.wav" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/signal_high_pass_added.wav" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/signal_low_pass_added.wav" beforeDir="false" />
+    </list>
+    <list id="d276b5b3-f759-4b8d-8855-7f4cd764561a" name="Changes by Maeeh" comment="">
+      <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -36,6 +35,21 @@
       <filtered-out-file-type name="TAG" />
       <filtered-out-file-type name="COMMIT_BY_MESSAGE" />
     </file-type-list>
+  </component>
+  <component name="LineStatusTrackerManager">
+    <file path="$PROJECT_DIR$/app.py">
+      <ranges>
+        <range start1="112" end1="113" start2="112" end2="113" changelist="7e873f6c-c415-43ef-b8a7-552e77cf1853" />
+        <range start1="118" end1="118" start2="118" end2="135" changelist="d276b5b3-f759-4b8d-8855-7f4cd764561a" />
+        <range start1="136" end1="138" start2="153" end2="155" changelist="7e873f6c-c415-43ef-b8a7-552e77cf1853" />
+        <range start1="139" end1="140" start2="156" end2="157" changelist="7e873f6c-c415-43ef-b8a7-552e77cf1853" />
+        <range start1="150" end1="151" start2="167" end2="184" changelist="7e873f6c-c415-43ef-b8a7-552e77cf1853" />
+        <range start1="152" end1="153" start2="185" end2="186" changelist="7e873f6c-c415-43ef-b8a7-552e77cf1853" />
+        <range start1="155" end1="156" start2="188" end2="189" changelist="7e873f6c-c415-43ef-b8a7-552e77cf1853" />
+        <range start1="226" end1="227" start2="259" end2="260" changelist="7e873f6c-c415-43ef-b8a7-552e77cf1853" />
+        <range start1="237" end1="238" start2="270" end2="271" changelist="7e873f6c-c415-43ef-b8a7-552e77cf1853" />
+      </ranges>
+    </file>
   </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
@@ -131,7 +145,7 @@
       <workItem from="1642602772302" duration="6000" />
       <workItem from="1642602788091" duration="9000" />
       <workItem from="1642602813732" duration="105000" />
-      <workItem from="1642602934369" duration="23110000" />
+      <workItem from="1642602934369" duration="26252000" />
     </task>
     <task id="LOCAL-00001" summary="Project creation">
       <created>1642167642085</created>
@@ -170,6 +184,13 @@
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/app.py</url>
+          <line>166</line>
+          <option name="timeStamp" value="15" />
+        </line-breakpoint>
+      </breakpoints>
       <default-breakpoints>
         <breakpoint type="python-exception">
           <properties notifyOnTerminate="true" exception="BaseException">
@@ -185,7 +206,7 @@
     </watches-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/codage_de_linformation$main.coverage" NAME="main Coverage Results" MODIFIED="1642628483243" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/codage_de_linformation$main.coverage" NAME="main Coverage Results" MODIFIED="1642631295016" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/app$Run_main.coverage" NAME="Run_main Coverage Results" MODIFIED="1642197554783" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>

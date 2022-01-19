@@ -266,10 +266,12 @@ def num_2():
 
 def lpc_window(signal, order: int, window_len: int):
     a = librosa.lpc(signal, order)  # coefficient du filtre
-    i_a = 1/a  # inversion des coefficients
-    [fr, H] = sc.freqz(1, i_a, window_len//2)  # filtre sur la moitié de la trames
-    H = np.real(H)  # Module
-    Hdouble = np.concatenate((H, np.flipud(H)))  # flip et concaténation pour 0,2 pi
+    [fr, H] = sc.freqz(1, a, window_len//2)  # filtre sur la moitié de la trames
+    i_H = 1/H
+    i_H = np.abs(i_H)  # Module
+    i_H = i_H / max(i_H)
+    Hdouble = np.concatenate((i_H, np.flipud(i_H)))  # flip et concaténation pour 0,2 pi
+    Hdouble = np.fft.fftshift(Hdouble)
     # Hdouble = 1/Hdouble
 
     # x = signal.copy()

@@ -110,11 +110,28 @@ def zero_padding_debut_fin(signal, length1, length2):
 
 
 def calcule_longueur_trame(fs, trame_length_ms):
-    return np.floor(fs*trame_length_ms/1000)
+    return round(np.floor(fs*trame_length_ms/1000))
 
 
 def calcule_nombre_trame(signal, longueur_trame):
     return math.floor((len(signal) - longueur_trame) / (longueur_trame // 2)) + 1
+
+
+def enveloppeSpectrale(amplitude_spectre: np.array, k: int = 10):
+    Y = np.fft.fft(amplitude_spectre)
+    indices = range(k, len(Y) - k + 2)
+    Y[indices] = 0
+    return np.real(np.fft.ifft(Y))
+
+
+def extractionFondamentales(amplitude_spectre: np.array, threshold: float = 0.5):
+    fondamentales = amplitude_spectre > threshold
+    return amplitude_spectre * fondamentales
+
+
+def dontFUCKwithPhase(full_spectre: np.array, amplitude_spectre: np.array):
+    phase_spectre = np.angle(full_spectre)
+    return amplitude_spectre * np.exp(1j * phase_spectre)
 
 
 def preparation_du_signal(fpath):
@@ -134,10 +151,10 @@ def preparation_du_signal(fpath):
     return fs, windowed_signal, longueur_trame
 
 
-def rehaussementLPC(file_path: str):
-    fs, signal_fenetre, longueur_trame = preparation_du_signal(file_path)
+def rehaussementLPC(fs, s_fenetre, longueur_trame):
+    signal_fenetre = s_fenetre.copy()
 
-    ordre_filtre_lpc = 15
+    ordre_filtre_lpc = 20
 
     predicted_signal_enveloppe = []
     for i in range(0, len(signal_fenetre)):
@@ -148,12 +165,28 @@ def rehaussementLPC(file_path: str):
         # posons notre filtre LPC valide et fonctionnel
 
         predicted_signal_enveloppe.append(lab.lpc_window(signal_abs, ordre_filtre_lpc, longueur_trame))
-        # if i % 50 == 0:
+
+
+
+        if i % 15 == 0:
+            plt.figure()
+            signal_freq = signal_freq / max(signal_freq)
+            s = enveloppeSpectrale(np.abs(signal_freq), 100)
+            plt.stem(np.abs(signal_freq))
+            plt.plot(np.abs(s), 'b')
+            plt.plot(predicted_signal_enveloppe[i], 'r')
+
+            plt.legend(['Enveloppe spectrale du signal', 'Sortie LPC'])
+        #     plt.plot(signal_abs)
+        #     plt.plot(predicted_signal_enveloppe[i])
+            # plt.plot(signal_freq)
+            # s = enveloppeSpectrale(np.abs(signal_freq))
+            # plt.plot(s)
         #     plt.figure()
-        #     plt.title("i = " + str(i) + "m = " + str(m))
+        #     plt.title("i = " + str(i) + "m = " + str(ordre_filtre_lpc))
         #
         #     l1 = plt.plot(20*np.log10(signal_abs))
-        #     l2 = plt.plot(20*np.log10(predicted_signal_enveloppe[i + j*len(windowed_signal)])+15, '-r')
+        #     l2 = plt.plot(20*np.log10(predicted_signal_enveloppe[i])+15, '-r')
         #     plt.legend([l1, l2], ['Signal', 'LPC'])
 
     corrected_predicted_signal_freq = []
@@ -224,7 +257,7 @@ def compression_sans_perte():  # QMF
 
 def rehaussement_du_signal(file_path: str):
     # Extraction du signal
-
+    fs, signal_fenetre, longueur_trame = preparation_du_signal(file_path)
     # ---Acquisition des paramètres---
 
     # À faire pour chaque:
@@ -235,7 +268,7 @@ def rehaussement_du_signal(file_path: str):
     #
 
     # Par approche LPC : Modélisation de l'enveloppe à l'aide d'un filtre adaptatif à prédiction linéaire
-    rehaussementLPC(file_path)
+    rehaussementLPC(fs, signal_fenetre, longueur_trame)
     # Par approche DFT/FFT : Décomposition fréquentielle
     # rehaussementDFT(file_path)
     # Par approche DCT : Décomposition fréquentielle
