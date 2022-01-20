@@ -17,7 +17,5 @@ if __name__ == '__main__':
         laboratoire.num_4()
     elif to_run == 5:
         app.rehaussement_du_signal('sound_files\\hel_fr1.wav')
-    elif to_run == 6:
-        cock.rehaussement_du_signal('sound_files\\hel_fr1.wav')
     else:
         print("Not running anything")

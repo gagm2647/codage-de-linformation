@@ -31,42 +31,22 @@ def open_wav_file(wfile: str):
         return None, None
 
 
-def rehaussementDFT(file_path: str):
+def rehaussementDFT(fs, signal_fenetre, longueur_trame):
     # Analyse selon la technique
     # Extraction de paramètres (coefficient de transformée, coefficients de filtre prédicteurs, etc)
     # Modification des paramètres => Permet de retrouvée une ENVELOPPE SPECTRALE comprimée d'un facteur 2 à 3
     # Aucun changement sur la position des harmoniques du signal d'origine
-    fs, s = open_wav_file(file_path)
-    s = s / max(s)
-    n = range(0, len(s) - 1)
-    n_plus = range(1, len(s))
+    s = signal_fenetre.copy()
 
-    plt.plot(s[n], s[n_plus], '.')
-    s2 = np.zeros((2, len(s) - 1))
-    s2[0, :] = s[n]
-    s2[1, :] = s[n_plus]
-
-    T = np.dot((1 / np.sqrt(2)), np.array([[1, 1], [1, -1]]))
-    X = np.dot(T, s2)
     plt.figure()
-    plt.plot(X[0, :], X[1, :], '.')
+    plt.plot(s)
+    S = np.fft.rfft(s)
 
-    PSD = abs(X[0])  # POWAH SPECTRUM DENSITY
-    spectre_de_lautisme = np.fft.fft(PSD)
-    spectre2 = spectre_de_lautisme
-    spectre2 = spectre_de_lautisme[np.linspace(0, 2 * np.pi, int(len(spectre_de_lautisme) / 2))]
-    E = abs(np.fft.ifft(spectre2))
-    plt.figure()
-    plt.plot(E)
+    enveloppe_helium = enveloppeSpectrale(np.abs(S))
+    fondamentales = extractionFondamentales(np.abs(S), threshold=0.5)
 
-    # X2 = X * 2
-    # plt.figure()
-    # plt.plot(X2[0, :], X2[1, :], '.')
-    #
-    # X3 = X * 3
-    # plt.figure()
-    # plt.plot(X3[0, :], X3[1, :], '.')
 
+    plt.show()
     pass
 
 
@@ -270,11 +250,11 @@ def rehaussement_du_signal(file_path: str):
     #
 
     # Par approche LPC : Modélisation de l'enveloppe à l'aide d'un filtre adaptatif à prédiction linéaire
-    rehaussementLPC(fs, signal_fenetre, longueur_trame)
+    # rehaussementLPC(fs, signal_fenetre, longueur_trame)
     # Par approche DFT/FFT : Décomposition fréquentielle
-    # rehaussementDFT(file_path)
+    rehaussementDFT(fs, signal_fenetre, longueur_trame)
     # Par approche DCT : Décomposition fréquentielle
-    # rehaussementDCT(file_path)
+    # rehaussementDCT(fs, signal_fenetre, longueur_trame)
     # ---Acquisition des paramètres---
 
     return "app"
