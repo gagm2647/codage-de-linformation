@@ -30,6 +30,11 @@ def open_wav_file(wfile: str):
         print('Wrong file type. Type accepted : .wav')
         return None, None
 
+def write_wav_file(data, wfile: str, fs: int):
+    if wfile.endswith('.wav'):
+        wavfile.write(wfile, fs, data)
+    else:
+        wavfile.write(wfile + '.wav', fs, data)
 
 def rehaussementDFT(fs, signal_fenetre, longueur_trame):
     # Analyse selon la technique
@@ -38,17 +43,53 @@ def rehaussementDFT(fs, signal_fenetre, longueur_trame):
     # Aucun changement sur la position des harmoniques du signal d'origine
     s = signal_fenetre.copy()
 
-    plt.figure()
-    plt.plot(s)
-    S = np.fft.rfft(s)
+    #plt.figure()
+    #plt.plot(s)
 
-    enveloppe_helium = enveloppeSpectrale(np.abs(S))
-    fondamentales = extractionFondamentales(np.abs(S), threshold=0.5)
+    trames_traitees = []
+    for i, trame in enumerate(s):
+        T = np.fft.fftshift(np.fft.fft(trame))
+        E = enveloppeSpectrale(np.abs(T), 25)
+        F = fondamentales = extractionFondamentales(np.abs(T), threshold=0.5)
+
+        T2 = compressionCentree(np.abs(T), 3)
+        E2 = enveloppeSpectrale(np.abs(T2), 25)
+        F2 = fondamentales = extractionFondamentales(np.abs(T2), threshold=0.5)
+
+        T2 = dontFUCKwithPhase(T, T2)
+        trames_traitees.append(np.real(np.fft.ifft(T2)))
+        plt.figure()
+        plt.plot(np.abs(T))
+        plt.plot(np.abs(T2))
+        plt.figure()
+        plt.plot(E)
+        plt.plot(E2)
+        plt.show()
+
+    overlapped = []
+    detrame_add_window(trames_traitees, overlapped, longueur_trame)
 
 
-    plt.show()
+
+    #signal_rehausse = overlapped[range(0, len(overlapped), 2)]
+    #write_wav_file(np.array(overlapped), 'sound_files\\test.wav', fs)
+
+    #plt.figure()
+    #plt.title('Signal rehaussé')
+    #plt.plot(signal_rehausse)
+
+
     pass
 
+def compressionCentree(signal, steps = 2):
+    s = signal[range(0, len(signal), steps)]
+    r = np.zeros(len(signal))
+    half_s = int(len(s)/2)
+    half_r = int(len(r)/2)
+    start = half_r-half_s
+    end = start + len(s)
+    r[range(start, end)] = s
+    return r
 
 def rehaussementDCT(file_path: str):
     pass
