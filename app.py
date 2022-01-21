@@ -73,11 +73,14 @@ def rehaussementDFT(file_path: str):
 def rehaussementDCT(file_path: str):
     pass
 
+
 def normalisation_signal(signal_in):
     return signal_in / max(signal_in)
 
+
 def soustraire_moyenne(signal_in):
     return signal_in - np.mean(signal_in)
+
 
 def extraction_du_signal(file_path: str):
     fs, signal = open_wav_file(file_path)
@@ -86,6 +89,7 @@ def extraction_du_signal(file_path: str):
     plt.title("Signal original")
     plt.plot(signal)
     return fs, signal
+
 
 def trame_and_windowing(signal, window, out, nb_window, window_len):
     for curr_window in range(0, nb_window):
