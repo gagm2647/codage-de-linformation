@@ -30,45 +30,89 @@ def open_wav_file(wfile: str):
         print('Wrong file type. Type accepted : .wav')
         return None, None
 
+def write_wav_file(data, wfile: str, fs: int):
+    if wfile.endswith('.wav'):
+        wavfile.write(wfile, fs, data)
+    else:
+        wavfile.write(wfile + '.wav', fs, data)
 
-def rehaussementDFT(file_path: str):
+
+def trammeur_fenetreur(_signal, _frame_len, _hop_len):
+    frames = librosa.util.frame(_signal, frame_length=_frame_len, hop_length=_hop_len)
+    return (np.hanning(_frame_len).reshape(-1, 1) * frames).T
+
+
+def reconstruction_signal(_windowed_frames, _hop_len):
+    _signal_reconstruit = []
+    for i, w in enumerate(_windowed_frames):
+        if i == 0:
+            for k in range(0, _hop_len):
+                _signal_reconstruit.append(w[k])
+        elif i + 1 < len(_windowed_frames):
+            w2 = _windowed_frames[i + 1]
+            for k in range(0, _hop_len):
+                _signal_reconstruit.append(w[k + _hop_len] + w2[k])
+        else:
+            for k in range(0, _hop_len):
+                _signal_reconstruit.append(w[k + _hop_len])
+    return np.array(_signal_reconstruit)
+
+
+def rehaussementDFT():
     # Analyse selon la technique
     # Extraction de paramètres (coefficient de transformée, coefficients de filtre prédicteurs, etc)
     # Modification des paramètres => Permet de retrouvée une ENVELOPPE SPECTRALE comprimée d'un facteur 2 à 3
     # Aucun changement sur la position des harmoniques du signal d'origine
-    fs, s = open_wav_file(file_path)
-    s = s / max(s)
-    n = range(0, len(s) - 1)
-    n_plus = range(1, len(s))
+    fs, raw = open_wav_file("sound_files/hel_fr1.wav")
+    signal = soustraire_moyenne(normalisation_signal(raw))
+    frame_len, hop_len = 882, 441
+    windowed_frames = trammeur_fenetreur(signal, frame_len, hop_len)
+    #s = reconstruction_signal(windowed_frames, hop_len)
 
-    plt.plot(s[n], s[n_plus], '.')
-    s2 = np.zeros((2, len(s) - 1))
-    s2[0, :] = s[n]
-    s2[1, :] = s[n_plus]
+    trames_traitees = []
+    for i, trame in enumerate(windowed_frames):
+        #ba = sc.butter(10, (200, 8000), btype='bandpass', output='ba')
 
-    T = np.dot((1 / np.sqrt(2)), np.array([[1, 1], [1, -1]]))
-    X = np.dot(T, s2)
-    plt.figure()
-    plt.plot(X[0, :], X[1, :], '.')
+        T = np.fft.fftshift(np.fft.fft(trame))
+        E = enveloppeSpectrale(np.abs(T), 25)
+        F = extractionFondamentales(np.abs(T), threshold=0.5)
 
-    PSD = abs(X[0])  # POWAH SPECTRUM DENSITY
-    spectre_de_lautisme = np.fft.fft(PSD)
-    spectre2 = spectre_de_lautisme
-    spectre2 = spectre_de_lautisme[np.linspace(0, 2 * np.pi, int(len(spectre_de_lautisme) / 2))]
-    E = abs(np.fft.ifft(spectre2))
-    plt.figure()
-    plt.plot(E)
+        T2 = compressionCentree(np.abs(T), 2)
+        E2 = enveloppeSpectrale(np.abs(T2), 25)
+        #F2 = extractionFondamentales(np.abs(T2), threshold=0.5)
 
-    # X2 = X * 2
-    # plt.figure()
-    # plt.plot(X2[0, :], X2[1, :], '.')
-    #
-    # X3 = X * 3
-    # plt.figure()
-    # plt.plot(X3[0, :], X3[1, :], '.')
+        trames_traitees.append(np.real(np.fft.ifft(T2)))#dontFUCKwithPhase(T, T2) * F)))
+        # plt.figure()
+        # plt.plot(np.abs(T))
+        # plt.plot(np.abs(T2))
+        # plt.figure()
+        # plt.plot(E)
+        # plt.plot(E2)
+        # plt.show()
+
+    s = reconstruction_signal(windowed_frames, hop_len)
+    plt.plot(s*max(raw))
+    plt.show()
+
+    # signal_rehausse = overlappedDFT[range(0, len(overlappedDFT), 2)]
+    write_wav_file(s, 'sound_files/test.wav', fs)
+
+    #plt.figure()
+    #plt.title('Signal rehaussé')
+    #plt.plot(signal_rehausse)
+
 
     pass
 
+def compressionCentree(signal, steps = 2):
+    s = signal[range(0, len(signal), steps)]
+    r = np.zeros(len(signal))
+    half_s = int(len(s)/2)
+    half_r = int(len(r)/2)
+    start = half_r-half_s
+    end = start + len(s)
+    r[range(start, end)] = s
+    return r
 
 def rehaussementDCT(file_path: str):
     pass
@@ -274,11 +318,11 @@ def rehaussement_du_signal(file_path: str):
     #
 
     # Par approche LPC : Modélisation de l'enveloppe à l'aide d'un filtre adaptatif à prédiction linéaire
-    rehaussementLPC(fs, signal_fenetre, longueur_trame)
+    # rehaussementLPC(fs, signal_fenetre, longueur_trame)
     # Par approche DFT/FFT : Décomposition fréquentielle
-    # rehaussementDFT(file_path)
+    rehaussementDFT()#fs, signal_fenetre, longueur_trame)
     # Par approche DCT : Décomposition fréquentielle
-    # rehaussementDCT(file_path)
+    # rehaussementDCT(fs, signal_fenetre, longueur_trame)
     # ---Acquisition des paramètres---
 
     return "app"
