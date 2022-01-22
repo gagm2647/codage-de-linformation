@@ -6,6 +6,7 @@ from numpy import ndarray
 from scipy.io import wavfile
 import scipy.signal as sc
 import numpy as np
+import scipy.fft as scfft
 import matplotlib.pyplot as plt
 import librosa
 import laboratoire as lab
@@ -58,53 +59,99 @@ def reconstruction_signal(_windowed_frames, _hop_len):
     return np.array(_signal_reconstruit)
 
 
+def rehaussementDCT():
+    # Analyse selon la technique
+    # Extraction de paramètres (coefficient de transformée, coefficients de filtre prédicteurs, etc)
+    # Modification des paramètres => Permet de retrouvée une ENVELOPPE SPECTRALE comprimée d'un facteur 2 à 3
+    # Aucun changement sur la position des harmoniques du signal d'origine
+    fs, raw = open_wav_file("sound_files/hel_fr2.wav")
+    signal = soustraire_moyenne(normalisation_signal(raw))
+    frame_len, hop_len = 882, 441
+    windowed_frames = trammeur_fenetreur(signal, frame_len, hop_len)
+    #s = reconstruction_signal(windowed_frames, hop_len)
+    trames_traitees = []
+    for i, trame in enumerate(windowed_frames):
+        b, a = sc.butter(3, 10000/fs, btype='low', output='ba')
+        #trame[range(hop_len, frame_len)] = 0#sc.filtfilt(b, a, trame)
+
+        T = scfft.dct(trame)
+        E = enveloppeSpectrale(np.abs(T), 10)
+        F = extractionFondamentales(np.abs(T), threshold=0.7)
+
+        T2 = compressionSpectre(np.abs(T), 3)
+        E2 = enveloppeSpectrale(np.abs(T2), 10)
+
+        trames_traitees.append(np.real(scfft.idct(dontMessWithPhase(T, T2) * 0.08 * F)))
+
+
+    s = reconstruction_signal(trames_traitees, hop_len)
+
+
+    plt.plot(s * max(raw))
+    # plt.figure()
+    # plt.plot(np.abs(T))
+    # plt.plot(np.abs(T2))
+    plt.figure()
+    plt.plot(np.abs(E))
+    plt.plot(np.abs(E2))
+    plt.show()
+
+    # signal_rehausse = overlappedDFT[range(0, len(overlappedDFT), 2)]
+    write_wav_file(s, 'sound_files/dct.wav', fs)
+
+
+    pass
+
+
 def rehaussementDFT():
     # Analyse selon la technique
     # Extraction de paramètres (coefficient de transformée, coefficients de filtre prédicteurs, etc)
     # Modification des paramètres => Permet de retrouvée une ENVELOPPE SPECTRALE comprimée d'un facteur 2 à 3
     # Aucun changement sur la position des harmoniques du signal d'origine
-    fs, raw = open_wav_file("sound_files/hel_fr1.wav")
+    fs, raw = open_wav_file("sound_files/hel_fr2.wav")
     signal = soustraire_moyenne(normalisation_signal(raw))
     frame_len, hop_len = 882, 441
     windowed_frames = trammeur_fenetreur(signal, frame_len, hop_len)
     #s = reconstruction_signal(windowed_frames, hop_len)
-
     trames_traitees = []
     for i, trame in enumerate(windowed_frames):
-        #ba = sc.butter(10, (200, 8000), btype='bandpass', output='ba')
-
-        T = np.fft.fftshift(np.fft.fft(trame))
-        E = enveloppeSpectrale(np.abs(T), 25)
-        F = extractionFondamentales(np.abs(T), threshold=0.5)
-
-        T2 = compressionCentree(np.abs(T), 2)
-        E2 = enveloppeSpectrale(np.abs(T2), 25)
-        #F2 = extractionFondamentales(np.abs(T2), threshold=0.5)
-
-        trames_traitees.append(np.real(np.fft.ifft(T2)))#dontFUCKwithPhase(T, T2) * F)))
-        # plt.figure()
-        # plt.plot(np.abs(T))
-        # plt.plot(np.abs(T2))
+        #b, a = sc.butter(3, 10000/fs, btype='low', output='ba')
+        #trame = sc.filtfilt(b, a, trame)  # trame[range(hop_len, frame_len)] = 0
+        #print(trame)
+        T = np.fft.fft(trame)
+        phase = np.angle(T)
+        Env = enveloppeSpectrale(np.abs(T), 100)
+       # print(len(T))
+        E = np.abs(T) / Env
         # plt.figure()
         # plt.plot(E)
-        # plt.plot(E2)
         # plt.show()
+        Env2 = compressionSpectre(Env, 3)
+        # plt.figure()
+        # plt.plot(np.abs(T))
+        # plt.plot(np.abs(Env))
+        # plt.plot(np.abs(Env2))
+        # plt.show()
+        #E2 = enveloppeSpectrale(np.abs(T2), 10)
+        trames_traitees.append(np.fft.ifft(Env2 * (E/max(E)) * np.exp(1j * phase)).real)
 
-    s = reconstruction_signal(windowed_frames, hop_len)
-    plt.plot(s*max(raw))
-    plt.show()
 
-    # signal_rehausse = overlappedDFT[range(0, len(overlappedDFT), 2)]
-    write_wav_file(s, 'sound_files/test.wav', fs)
+    s = reconstruction_signal(trames_traitees, hop_len)
 
     #plt.figure()
-    #plt.title('Signal rehaussé')
-    #plt.plot(signal_rehausse)
+    plt.plot((s * raw.max()) + np.mean(raw))
+    # plt.figure()
+    # plt.plot(np.abs(T))
+    # plt.plot(np.abs(Env))
+    plt.show()
+    #x = s * raw.max() + np.mean(raw)
+    # signal_rehausse = overlappedDFT[range(0, len(overlappedDFT), 2)]
+    write_wav_file(s * raw.max(), 'sound_files/fft.wav', fs)
 
 
     pass
 
-def compressionCentree(signal, steps = 2):
+def compressionSpectreCentree(signal, steps = 2):
     s = signal[range(0, len(signal), steps)]
     r = np.zeros(len(signal))
     half_s = int(len(s)/2)
@@ -114,8 +161,18 @@ def compressionCentree(signal, steps = 2):
     r[range(start, end)] = s
     return r
 
-def rehaussementDCT(file_path: str):
-    pass
+def compressionSpectre(signal, steps = 2):
+    # tmp = X[range(0, len(X), 2)]
+    # X2 = np.zeros(len(X))
+    # X2[range(0, int(len(tmp) / 2))] = tmp[range(0, int(len(tmp) / 2))]
+    # X2[range(len(X) - int(len(tmp) / 2), len(X))] = tmp[range(int(len(tmp) / 2) + 1, len(tmp))]
+    s = signal[range(0, len(signal), steps)]
+    r = np.zeros(len(signal))
+    half_s = int(len(s)/2)
+    i = len(s) - half_s - half_s
+    r[range(0, half_s)] = s[range(0, half_s)]
+    r[range(len(r)-half_s, len(r))] = s[range(half_s + i, len(s))]
+    return r
 
 def normalisation_signal(signal_in):
     return signal_in / max(signal_in)
@@ -162,10 +219,13 @@ def calcule_nombre_trame(signal, longueur_trame):
 
 
 def enveloppeSpectrale(amplitude_spectre: np.array, k: int = 10):
-    Y = np.fft.fft(amplitude_spectre)
+    a = 20 * np.log10(amplitude_spectre)
+    Y = np.fft.fft(a)
+    phase = np.angle(Y)
+    amp = np.abs(Y)
     indices = range(k, len(Y) - k + 2)
-    Y[indices] = 0
-    return np.real(np.fft.ifft(Y))
+    amp[indices] = 0
+    return 10 ** (np.real(np.fft.ifft(amp * np.exp(1j * phase)))/20)
 
 
 def extractionFondamentales(amplitude_spectre: np.array, threshold: float = 0.5):
@@ -173,8 +233,8 @@ def extractionFondamentales(amplitude_spectre: np.array, threshold: float = 0.5)
     return amplitude_spectre * fondamentales
 
 
-def dontFUCKwithPhase(full_spectre: np.array, amplitude_spectre: np.array):
-    phase_spectre = np.angle(full_spectre)
+def dontMessWithPhase(trame: np.array, amplitude_spectre: np.array):
+    phase_spectre = np.angle(trame)
     return amplitude_spectre * np.exp(1j * phase_spectre)
 
 
@@ -203,7 +263,7 @@ def rehaussementLPC(fs, s_fenetre, longueur_trame):
     predicted_signal_enveloppe = []
     for i in range(0, len(signal_fenetre)):
         signal_freq = np.fft.fft(signal_fenetre[i])
-        signal_freq = np.fft.fftshift(signal_freq)
+        #signal_freq = np.fft.fftshift(signal_freq)
         signal_abs = np.real(signal_freq)
         signal_abs = signal_abs / max(signal_abs)
         # posons notre filtre LPC valide et fonctionnel
@@ -316,9 +376,9 @@ def rehaussement_du_signal(file_path: str):
     # Par approche LPC : Modélisation de l'enveloppe à l'aide d'un filtre adaptatif à prédiction linéaire
     # rehaussementLPC(fs, signal_fenetre, longueur_trame)
     # Par approche DFT/FFT : Décomposition fréquentielle
-    rehaussementDFT()#fs, signal_fenetre, longueur_trame)
+    rehaussementDFT()      #fs, signal_fenetre, longueur_trame)
     # Par approche DCT : Décomposition fréquentielle
-    # rehaussementDCT(fs, signal_fenetre, longueur_trame)
+    rehaussementDCT()
     # ---Acquisition des paramètres---
 
     return "app"
