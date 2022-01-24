@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import librosa
 import laboratoire as lab
-
+import collections
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -280,69 +280,186 @@ def rehaussement_du_signal(file_path: str):
     return "app"
 
 
-def culdecul():
+def qmf_pb(file_path: str, upsampling: bool):
+    """
+    Low Pass an input signal and downscale or upsampling.
+    :param file_path: Input signal
+    :param upsampling: Wether or not the signal should be upsampled
+    :return: Low passed and up/down sampled signal
+    """
+    cutoff_freq = 500
+    coeff = [0.00938715, 0.06942827, -0.07065183, 0.48998080, 0.48998080, -0.07065183, 0.06942827, 0.00938715]
+    h_pb = coeff
+    h_ph = [((-1)**i)*coeff[i] for i in range(len(h_pb))]
+    fs, input_signal = open_wav_file(file_path)
+    #input_signal_freq = np.fft.fft(input_signal)
+    signal_pb = sc.lfilter(h_pb, 1, input_signal)
+    signal_pb_freq = np.fft.fft(signal_pb)
+    signal_ph = sc.lfilter(h_ph, 1, input_signal)
+    signal_ph_freq = np.fft.fft(signal_ph)
+    #for n in range(len(input_signal)):
+        #for j in range(len(coeff)):
+            #if j < n:
+                #signal_pb[n] = signal_pb[n] + (-1**n)*coeff[len(coeff)-1-j]*input_signal[n-j]
+                #signal_ph[n] = signal_pb[n] + (-1 ** n) * coeff[len(coeff) - 1 - j] * input_signal[n - j]
+    #signal_pb_freq = np.fft.fft(signal_pb)
+    fig, (ax1) = plt.subplots(1, 1)
+    ax1.plot(signal_ph_freq / max(signal_ph_freq), 'r')
+    ax1.plot(signal_pb_freq/max(signal_pb_freq))
+
+    ax1.set_title("Passe bas")
+    #ax2.set_title("Passe haut")
+    plt.show()
+    #input_freq = np.fft.fft(input_signal)
+    #Passe haut
+    #Filtre passe-bas dans le livre de reference
+    #filtered_signal = sc.lfilter(b, a, input_freq)
+    #fig = plt.axes()
+    #fig.stem(filtered_signal)
+    return 2
+
+
+def conventional_noise_feedback_coding(file_path: str):
     # Codage avec boucle de retroaction de bruit
     # Step by step
-    input_signal = []
+    fs, input_signal = open_wav_file(file_path)
+
+    input_signal = input_signal/max(input_signal)
+    input_signal = input_signal-np.mean(input_signal)
     output_signal = []
     quantization_error = []
-    u_n = []
-    uq_n = []
+    prediction_error = []
     window_size = 882
-    order = 1
+    order = 15
     alpha = 0.8
+    u_n = 0     # Quantizer input (single sample)
+    uq_n = 0    # Quantizer output (single sample)
+    q_n = collections.deque(maxlen=order+1)    # Noise feedback Filter input (Sample buffer of 'order' length)
+    f_n = [0]     # Noise feedback Filter output (single sample)
     # 1 - Frame by Frame (20 ms)
-        # e[n] = s[n] - sortieLPC
+    for i in range(0, len(input_signal), window_size):
+        trame = input_signal[i:i + window_size].astype('float')
+        prediction_error, error_coefficients = get_prediction_error(trame, ordre=order)
+        sq_n = []  # Output array
+        #fig1 = plt.axes()
+        #fig1.plot(trame)
+        #fig1.plot(prediction_error, '--r', linewidth=1.0)
+        #fig1.set_title('Erreur de prediction')
+        #coefficients = librosa.lpc(prediction_error, order=order) / alpha
+        quantize_range = get_quantize_range(prediction_error, 8)
+        noise_feedback_coefficients = librosa.lpc(np.array(trame).astype('float'), order=order) #* alpha #Coefficients remain the same for a whole trame
+        for k in range(len(noise_feedback_coefficients)):
+            noise_feedback_coefficients[k] = noise_feedback_coefficients[k]*(alpha**k)
+        # Avoir 'ordre' echantillons avant de calculer les coefficients du filtre de feedback.
+        for j in range(len(prediction_error)):
+            u_n = prediction_error[j] + f_n[0]
+            uq_n = quantize_sample(u_n, quantize_range)
+            #q_n = [u_n - uq_n]
+            q_n.append(u_n - uq_n)
+            if len(q_n) == q_n.maxlen:
+                #Noise Feedback Filter
+                f_n = sc.lfilter(noise_feedback_coefficients, 1, q_n)
+            sq_n.append(uq_n)
+        output_trame = get_output_trame(sq_n, coefficients=error_coefficients)
+        fig = plt.axes()
+        fig.plot(trame)
+        fig.plot(output_trame, '--r', linewidth=1.0)
+        fig.set_title('Trame de sortie')
 
-    predicted_signal = librosa.lpc(input_signal, order)
-    prediction_error = input_signal - predicted_signal
-
-    # 2 - Echantillon par echantillon (loop alert)
-        # Entree quantizer
-            # u[n] = e[n] + f[n]  (ou f[n] est la sortie du noise feedback filter)
-        # Entree noise feedback filter
-            # q[n] = u[n] - uq[n]   (ou uq[n] est la sortie du quantizer]
-    noise_feedback = librosa.lpc(quantization_error/alpha, order)
-    u_n = prediction_error + noise_feedback
-    quantization_error = u_n - uq_n
-
-    # 3 - Frame by Frame (20 ms)
-        # sq[n] = uq[n] + sortieLPC
-    output_signal = uq_n + librosa.lpc(output_signal)
     return 2
+
+
+def get_noise_feedback(buffer, coefficients, ordre, constante):
+    """
+    Gets the noise feedback for a 'ordre' order filter
+    :param coefficients: Filter coefficients
+    :param buffer: Quantizer error buffer of length 'ordre' -> Quantizer_input - Quantizer_output
+    :param ordre: Filter order
+    :param constante: Value given in Annex C "Noise Feedback Coding"
+    :return:
+    """
+    #error_coefficients = librosa.lpc(np.array(window).astype('float'), order=ordre) / constante
+    #coefficients = -error_coefficients[1:]
+    noise_feedback = sc.lfilter(coefficients, 1, buffer)
+    return noise_feedback
+
+
+def get_quantize_range(in_trame, n_bits):
+    """
+    Returns the possible values of quantization with n_bits
+    :param in_trame: Trame to use
+    :param n_bits: Number of bits
+    :return: array of possible values when quantizing bits
+    """
+    in_min = np.min(in_trame)
+    in_max = np.max(in_trame)
+    out_possible_values = np.linspace(start=in_min, stop=in_max, num=((2**n_bits) - 1))
+    return out_possible_values
+
 
 def get_prediction_error(in_trame, ordre):
     """
     :param ordre: LPC filter order
     :param in_trame: 20 ms trame (ndarray)
-    :return: 20 ms prediction error trame
+    :return: 20 ms prediction error trame and prediction error coefficients.
     """
-    out_trame = in_trame - librosa.lpc(in_trame, order=ordre)
-    return out_trame
+    #Is the error simply the signal being predicted, or is it the difference -> in - predicted
+    prediction_error_coefficients = librosa.lpc(in_trame, order=ordre)
+    prediction_error = sc.lfilter(prediction_error_coefficients, 1, in_trame)
+    #_, i_inverse_enveloppe = sc.freqz(1, prediction_error_coefficients, len(in_trame)//2)
+    #i_inverse_enveloppe = i_inverse_enveloppe/max(i_inverse_enveloppe)
+    #fft_trame = np.fft.fft(in_trame)
+    #fft_trame = fft_trame/max(fft_trame)
+    #plt.figure()
+    #plt.plot(np.abs(fft_trame))
+    #plt.plot(i_inverse_enveloppe, '--r', linewidth=1.0)
+    #prediction_error = in_trame - predicted_signal
+    return prediction_error, prediction_error_coefficients
 
-def get_output_signal(in_trame, ordre):
+
+def get_output_trame(in_trame, coefficients):
     """
-    :param ordre: LPC filter order
-    :param in_trame: 20 ms trame (ndarray) - Output of quantizer
+    :param coeffcients: First LPC Filter coefficients (prediction error coefficients)
+-    :param in_trame: 20 ms trame (ndarray) - Output of quantizer
     :return: 20 ms output signal trame
     """
-    out_trame = in_trame + librosa.lpc(in_trame, order=ordre)
+    #prediction_error_coefficients = librosa.lpc(np.array(in_trame), order=ordre)
+    #prediction_error_coefficients = -prediction_error_coef+ficients[1:]
+    #out_trame = sc.lfilter(1, coefficients, in_trame) #TODO: FIX THIS
+    out_trame = sc.lfilter(coefficients, 1, in_trame)  # TODO: FIX THIS
+    #FFT SIGNAL -> DOMAIN FREQUENTIEL
+    #FREQZ avec Coefficients erreur
+    #Multiplication entre signal en frequence et reponse en frequences du filtre.
+    #in_trame_freq = np.fft.fft(in_trame)
+    #_, half_inverse_filter_freq_response = sc.freqz(b=1, a=prediction_error_coefficients, worN=len(in_trame_freq)//2)
+    #inverse_filter_freq_response = np.concatenate((half_inverse_filter_freq_response, np.flipud(half_inverse_filter_freq_response)))
+    #fig = plt.figure()
+    #fig.stem(in_trame_freq)
+
+    #fig, (ax1, ax2) = plt.subplots(1, 2)
+    #ax1.stem(in_trame_freq)
+    #ax2.stem(inverse_filter_freq_response)
+    #ax1.legend(['Input'])
+    #ax2.legend(['Fitler reponse'])
+    #plt.show()
+
+    #out_trame_freq = in_trame_freq * inverse_filter_freq_response
+    #out_trame = np.real(np.fft.ifft(out_trame_freq))
+    #out_trame = in_trame + predicted_signal
     return out_trame
 
-def B_2():
 
+def B_2():
     return 2
 
-def quantizeLF():
-    """
-    Quantize low frequencies on X bits
-    :return:
-    """
-    return 'notHighAF'
 
-def quantizeHF():
+def quantize_sample(in_sample, quantize_range):
     """
-    Quantize high frequencies on X bits
-    :return:
+    Quantize low frequencies on according to a list of possible values
+    :param in_sample: input sample
+    :param quantize_range: possible output values
+    :return: the quantized sample
     """
-    return 'highAF'
+    idx = (np.abs(quantize_range - in_sample)).argmin()
+    quantized_sample = quantize_range[idx]
+    return quantized_sample
