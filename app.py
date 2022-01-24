@@ -259,80 +259,69 @@ def preparation_du_signal(fpath):
     trame_and_windowing(signal, hanning, windowed_signal, nb_window, longueur_trame)
     return fs, windowed_signal, longueur_trame
 
-def test_sinus(f):
-    """
-    tests the first station algo
-    :param f: the desired frequency
-    """
-    fs = 44100
-    sample = 44100
-    x = np.arange(sample)
-    signal = 2 * np.sin(2 * np.pi * f * x / fs)
-    signal2 = 2 * np.sin(2 * np.pi * f * 2 * x / fs)
-
-    # noise = 0.5 * np.sin(2 * np.pi * f // 2 * x / fs)
-    # noise += 0.25 * np.sin(2 * np.pi * f ** 2 * x / fs)
-    # noise = np.random.normal(0, 1, sample)
-    # signal = signal + noise
-    signal = signal + signal2
-    return signal
-
 def rehaussementLPC():
     fs, raw = open_wav_file("sound_files/hel_fr2.wav")
     signal = soustraire_moyenne(normalisation_signal(raw))
     frame_len, hop_len = 882, 441
     windowed_frames = trammeur_fenetreur(signal, frame_len, hop_len)
-    # s = reconstruction_signal(windowed_frames, hop_len)
     trames_traitees = []
     for i, trame in enumerate(windowed_frames):
-        a = librosa.lpc(np.array(trame), 350)
+        a = librosa.lpc(np.array(trame), 60) #jouer avec l'ordre dans l'intervalle ([0,100])
         E_n = sc.lfilter(a, 1, trame)
         E_w = np.fft.fft(E_n)
         E_w_amp = np.abs(E_w)
         E_w_phase = np.angle(E_w)
-
         [fr, enveloppe] = sc.freqz(1, a, frame_len//2)
-        env_amp = np.abs(enveloppe)
-        env_phase = np.angle(enveloppe)
-
+        # sc.lfilter(1, a, E_n)
         enveloppe_flip = np.concatenate((enveloppe, np.flipud(enveloppe)))
 
-        # enveloppe = enveloppeSpectrale(np.abs(E_w), 50)
-        # E = np.abs(E_w) / enveloppe
-        enveloppe_downsampling = compressionSpectre(enveloppe_flip, 3)
-        # plt.figure()
-        # plt.stem(enveloppe_downsampling)
-        # plt.plot(E_w)
-        trames_traitees.append(np.fft.ifft(enveloppe_downsampling * E_w_amp * np.exp(1j * E_w_phase)).real)
+        fr = np.linspace(0, 2*np.pi, len(fr)*2)
+        enveloppe_downsampling = compressionSpectre(enveloppe_flip, 2)
 
-    # plt.figure()
-    # plt.title('down')
-    # plt.plot(E_n, )
-    # plt.plot(E_w)
-    # plt.plot(enveloppe_flip)
+        frequence_reponse_frequence = np.fft.ifft(enveloppe_downsampling).real
+        frequence_reponse_frequence = normalisation_signal(frequence_reponse_frequence)
+        test_coefficient_nouvelle_enveloppe = librosa.lpc(frequence_reponse_frequence, 10)
+        signal_rehausse = sc.lfilter(test_coefficient_nouvelle_enveloppe, 1, E_n)
+        #lpc(i_fft_(reponse_en_frequence_filtre)) = coefficient de la nouvelle enveloppe
+        #lfilter(1, b, E_n)
 
-    # plt.plot(enveloppe, label='env_gath')
-    # plt.plot(enveloppe_downsampling, )
-    # rehaussementDFT()
+        # enveloppe_downsampling_zero_padded = np.concatenate((enveloppe_downsampling, np.zeros(len(E_w_amp))))
+        # E_w_zero_padded = np.concatenate((E_w, np.zeros(len(enveloppe_downsampling))))
+        # E_w_phase_zero_padded = np.concatenate((E_w_phase, np.zeros((len(enveloppe_downsampling)))))
 
-    plt.legend()
-    plt.show()
+        #ajouter du zero-padding pour matcher la convolution
+        # trames_traitees.append(np.fft.ifft(enveloppe_downsampling * E_w_amp * np.exp(1j * E_w_phase)).real)
+        # trames_traitees.append(np.fft.ifft(E_w_zero_padded*enveloppe_downsampling_zero_padded * np.exp(1j * E_w_phase_zero_padded)).real)
+        trames_traitees.append(signal_rehausse)
+
     s = reconstruction_signal(trames_traitees, hop_len)
 
     #debruitage
     s = normalisation_signal(s)
-    i = np.abs(s) > 0.005
+    i = np.abs(s) > 0.01
     s = s * i
+    plt.figure()
+    plt.stem(frequence_reponse_frequence)
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    ax1.stem(np.linspace(0, np.pi * 2, len(signal)), normalisation_signal(np.abs(np.fft.fft(signal))), label='Signal original')
+    ax2.stem(np.linspace(0, np.pi * 2, len(s)), normalisation_signal(np.abs(np.fft.fft(s))), label='Signal rehaussé')
+    ax1.set_title('Réponse en fréquence du signal original')
+    ax2.set_title('Réponse en fréquence du signal rehaussé')
+    ax1.set_xlabel('Fréquence $\omega$ [rads]')
+    ax1.set_ylabel('Amplitude')
+    ax2.set_xlabel('Fréquence $\omega$ [rads]')
+    ax2.set_ylabel('Amplitude')
 
-    # plt.figure()
-    # plt.plot((s * raw.max()) + np.mean(raw))
-    # plt.figure()
-    # plt.plot(np.abs(T))
-    # plt.plot(np.abs(Env))
-    # x = s * raw.max() + np.mean(raw)
-    # signal_rehausse = overlappedDFT[range(0, len(overlappedDFT), 2)]
-    write_wav_file(s, 'sound_files/lpc.wav', fs)
+    plt.figure()
+    plt.plot(normalisation_signal(signal), label='Signal original')
+    plt.plot(s, label='Signal rehaussé')
+    plt.title('Comparaison du rehaussement')
+    plt.xlabel('Échantillon')
+    plt.ylabel('Amplitude')
+    plt.legend()
+
     plt.show()
+    write_wav_file(s, 'sound_files/lpc_close_enough_v_eric.wav', fs)
     return "What is the airspeed velocity of an unladen swallow?"
 
 
