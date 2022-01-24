@@ -71,30 +71,25 @@ def rehaussementDCT():
     #s = reconstruction_signal(windowed_frames, hop_len)
     trames_traitees = []
     for i, trame in enumerate(windowed_frames):
-        b, a = sc.butter(3, 10000/fs, btype='low', output='ba')
-        #trame[range(hop_len, frame_len)] = 0#sc.filtfilt(b, a, trame)
 
         T = scfft.dct(trame)
-        E = enveloppeSpectrale(np.abs(T), 10)
-        F = extractionFondamentales(np.abs(T), threshold=0.7)
+        neg = T < 0
+        Env = enveloppeSpectreDCT(abs(T), 45)
+        E = T / Env
+        Env2 = compressionSpectreDCT(Env, 3)
 
-        T2 = compressionSpectre(np.abs(T), 3)
-        E2 = enveloppeSpectrale(np.abs(T2), 10)
-
-        trames_traitees.append(np.real(scfft.idct(dontMessWithPhase(T, T2) * 0.08 * F)))
+        trames_traitees.append(scfft.idct(Env2 * E))
 
 
     s = reconstruction_signal(trames_traitees, hop_len)
 
-
-    plt.plot(s * max(raw))
+    #print(E)
+    # plt.plot(s * max(raw))
     # plt.figure()
-    # plt.plot(np.abs(T))
-    # plt.plot(np.abs(T2))
-    plt.figure()
-    plt.plot(np.abs(E))
-    plt.plot(np.abs(E2))
-    plt.show()
+    # #plt.plot(E)
+    # plt.plot(Env)
+    # plt.plot(Env2)
+    # plt.show()
 
     # signal_rehausse = overlappedDFT[range(0, len(overlappedDFT), 2)]
     write_wav_file(s, 'sound_files/dct.wav', fs)
@@ -102,6 +97,20 @@ def rehaussementDCT():
 
     pass
 
+
+def enveloppeSpectreDCT(amplitude_freqs: np.array, k: int = 10):
+    a = 20 * np.log10(amplitude_freqs)
+    Y = scfft.dct(a)
+    indices = range(k, len(Y))
+    Y[indices] = 0
+    return 10 ** (scfft.idct(Y) / 20)
+
+
+def compressionSpectreDCT(signal, steps=2):
+    s = signal[range(0, len(signal), steps)]
+    r = np.zeros(len(signal))
+    r[range(0, len(s))] = s
+    return r
 
 def rehaussementDFT():
     # Analyse selon la technique
@@ -120,7 +129,7 @@ def rehaussementDFT():
         #print(trame)
         T = np.fft.fft(trame)
         phase = np.angle(T)
-        Env = enveloppeSpectrale(np.abs(T), 100)
+        Env = enveloppeSpectrale(np.abs(T), 45)
        # print(len(T))
         E = np.abs(T) / Env
         # plt.figure()
@@ -151,6 +160,9 @@ def rehaussementDFT():
 
 
     pass
+
+
+
 
 def compressionSpectreCentree(signal, steps = 2):
     s = signal[range(0, len(signal), steps)]
