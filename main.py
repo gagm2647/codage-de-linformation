@@ -19,6 +19,6 @@ if __name__ == '__main__':
     elif to_run == 7:
         app.conventional_noise_feedback_coding('sound_files\\hel_fr1.wav')
     elif to_run == 8:
-        app.qmf_pb('sound_files\\hel_fr1.wav', False)
+        app.qmf('sound_files\\hel_fr1.wav')
     else:
         print("Not running anything")

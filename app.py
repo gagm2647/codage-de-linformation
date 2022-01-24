@@ -280,15 +280,15 @@ def rehaussement_du_signal(file_path: str):
     return "app"
 
 
-def qmf_pb(file_path: str, upsampling: bool):
+def qmf(file_path: str):
     """
-    Low Pass an input signal and downscale or upsampling.
+    Splits signal in two equal
     :param file_path: Input signal
-    :param upsampling: Wether or not the signal should be upsampled
-    :return: Low passed and up/down sampled signal
+    :return: Synthesized signal
     """
-    cutoff_freq = 500
-    coeff = [0.00938715, 0.06942827, -0.07065183, 0.48998080, 0.48998080, -0.07065183, 0.06942827, 0.00938715]
+    #coeff = [0.00938715, 0.06942827, -0.07065183, 0.48998080, 0.48998080, -0.07065183, 0.06942827, 0.00938715]
+    coeff = [0.002898163, -0.009972252, -0.001920936, 0.03596853, -0.01611869, -0.09530234, 0.1067987, 0.4773469,
+             0.4773469, 0.1067987, -0.09530234, -0.01611869, 0.03596853, -0.001920936, -0.009972252, 0.002898163]
     h_pb = coeff
     h_ph = [((-1)**i)*coeff[i] for i in range(len(h_pb))]
     fs, input_signal = open_wav_file(file_path)
@@ -297,33 +297,29 @@ def qmf_pb(file_path: str, upsampling: bool):
     signal_pb_freq = np.fft.fft(signal_pb)
     signal_ph = sc.lfilter(h_ph, 1, input_signal)
     signal_ph_freq = np.fft.fft(signal_ph)
-    #for n in range(len(input_signal)):
-        #for j in range(len(coeff)):
-            #if j < n:
-                #signal_pb[n] = signal_pb[n] + (-1**n)*coeff[len(coeff)-1-j]*input_signal[n-j]
-                #signal_ph[n] = signal_pb[n] + (-1 ** n) * coeff[len(coeff) - 1 - j] * input_signal[n - j]
-    #signal_pb_freq = np.fft.fft(signal_pb)
     fig, (ax1) = plt.subplots(1, 1)
-    ax1.plot(signal_ph_freq / max(signal_ph_freq), 'r')
-    ax1.plot(signal_pb_freq/max(signal_pb_freq))
-
-    ax1.set_title("Passe bas")
+    ax1.plot(np.linspace(0, np.pi * 2, len(signal_ph_freq)), signal_ph_freq / max(signal_ph_freq), 'r', label='Passe-haut')
+    ax1.plot(np.linspace(0, np.pi * 2, len(signal_pb_freq)), signal_pb_freq/max(signal_pb_freq), label='Passe-bas')
+    ax1.set_ylabel('Amplitude')
+    ax1.set_xlabel('Fréquence $\omega$ [rads]')
+    ax1.set_title("Signal séparé en sous-bandes")
     #ax2.set_title("Passe haut")
+    plt.legend()
     plt.show()
-    #input_freq = np.fft.fft(input_signal)
-    #Passe haut
-    #Filtre passe-bas dans le livre de reference
-    #filtered_signal = sc.lfilter(b, a, input_freq)
-    #fig = plt.axes()
-    #fig.stem(filtered_signal)
+    #Down sampling
+    signal_pb_downsampled = signal_pb[range(0, len(signal_pb), 2)]
+    signal_ph_downsampled = signal_pb[range(0, len(signal_ph), 2)]
+    #Synthetize signal
+    signal_pb_synth = conventional_noise_feedback_coding(signal_pb_downsampled, 3)
+    signal_ph_synth = conventional_noise_feedback_coding(signal_ph_downsampled, 3)
     return 2
 
 
-def conventional_noise_feedback_coding(file_path: str):
+def conventional_noise_feedback_coding(in_signal, n_bits):
     # Codage avec boucle de retroaction de bruit
     # Step by step
-    fs, input_signal = open_wav_file(file_path)
-
+    #fs, input_signal = open_wav_file(file_path)
+    input_signal = in_signal
     input_signal = input_signal/max(input_signal)
     input_signal = input_signal-np.mean(input_signal)
     output_signal = []
@@ -346,7 +342,7 @@ def conventional_noise_feedback_coding(file_path: str):
         #fig1.plot(prediction_error, '--r', linewidth=1.0)
         #fig1.set_title('Erreur de prediction')
         #coefficients = librosa.lpc(prediction_error, order=order) / alpha
-        quantize_range = get_quantize_range(prediction_error, 8)
+        quantize_range = get_quantize_range(prediction_error, n_bits)
         noise_feedback_coefficients = librosa.lpc(np.array(trame).astype('float'), order=order) #* alpha #Coefficients remain the same for a whole trame
         for k in range(len(noise_feedback_coefficients)):
             noise_feedback_coefficients[k] = noise_feedback_coefficients[k]*(alpha**k)
@@ -362,9 +358,12 @@ def conventional_noise_feedback_coding(file_path: str):
             sq_n.append(uq_n)
         output_trame = get_output_trame(sq_n, coefficients=error_coefficients)
         fig = plt.axes()
-        fig.plot(trame)
-        fig.plot(output_trame, '--r', linewidth=1.0)
-        fig.set_title('Trame de sortie')
+        fig.plot(prediction_error, label='Erreur de prédiction')
+        fig.plot(sq_n, '--r', linewidth=1.0, label='Erreur de prédiction quantifiée')
+        fig.set_title('Quantificateur')
+        fig.set_xlabel('n')
+        fig.set_ylabel('Amplitude')
+        fig.legend()
 
     return 2
 
