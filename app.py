@@ -61,26 +61,40 @@ def reconstruction_signal(_windowed_frames, _hop_len):
 
 
 def rehaussementDCT():
-    # Analyse selon la technique
-    # Extraction de paramètres (coefficient de transformée, coefficients de filtre prédicteurs, etc)
-    # Modification des paramètres => Permet de retrouvée une ENVELOPPE SPECTRALE comprimée d'un facteur 2 à 3
-    # Aucun changement sur la position des harmoniques du signal d'origine
     fs, raw = open_wav_file("sound_files/hel_fr2.wav")
     signal = soustraire_moyenne(normalisation_signal(raw))
     frame_len, hop_len = 882, 441
     windowed_frames = trammeur_fenetreur(signal, frame_len, hop_len)
-    # s = reconstruction_signal(windowed_frames, hop_len)
     trames_traitees = []
     for i, trame in enumerate(windowed_frames):
+
         T = scfft.dct(trame)
-        neg = T < 0
         Env = enveloppeSpectreDCT(abs(T), 45)
         E = T / Env
         Env2 = compressionSpectreDCT(Env, 3)
 
+        # plt.figure()
+        # plt.plot(np.linspace(0, np.pi, len(Env)), np.abs(Env), label='Enveloppe Spectrale Originale')
+        # plt.plot(np.linspace(0, np.pi, len(Env2)), np.abs(Env2), label='Enveloppe Spectrale Comprimée')
+        # plt.title("Comparaison des Enveloppes Spectrales pour une trame")
+        # plt.ylabel("Amplitude")
+        # plt.xlabel("Fréquence $\omega$ [rads]")
+        # plt.legend()
+        # plt.show()
+
         trames_traitees.append(scfft.idct(Env2 * E))
 
+
     s = reconstruction_signal(trames_traitees, hop_len)
+
+    # plt.figure()
+    # plt.plot(signal, label='Signal original')
+    # plt.plot(s, label='Signal restauré')
+    # plt.title("Comparaison des signaux temporels")
+    # plt.ylabel("Amplitude")
+    # plt.xlabel("Échantillon")
+    # plt.legend()
+    # plt.show()
 
     write_wav_file(s, 'sound_files/dct.wav', fs)
 
@@ -104,51 +118,44 @@ def compressionSpectreDCT(signal, steps=2):
 
 
 def rehaussementDFT():
-    # Analyse selon la technique
-    # Extraction de paramètres (coefficient de transformée, coefficients de filtre prédicteurs, etc)
-    # Modification des paramètres => Permet de retrouvée une ENVELOPPE SPECTRALE comprimée d'un facteur 2 à 3
-    # Aucun changement sur la position des harmoniques du signal d'origine
     fs, raw = open_wav_file("sound_files/hel_fr2.wav")
     signal = soustraire_moyenne(normalisation_signal(raw))
     frame_len, hop_len = 882, 441
     windowed_frames = trammeur_fenetreur(signal, frame_len, hop_len)
-    # s = reconstruction_signal(windowed_frames, hop_len)
     trames_traitees = []
     for i, trame in enumerate(windowed_frames):
-        # b, a = sc.butter(3, 10000/fs, btype='low', output='ba')
-        # trame = sc.filtfilt(b, a, trame)  # trame[range(hop_len, frame_len)] = 0
-        # print(trame)
+
         T = np.fft.fft(trame)
         phase = np.angle(T)
         Env = enveloppeSpectrale(np.abs(T), 45)
-        # print(len(T))
         E = np.abs(T) / Env
-        # plt.figure()
-        # plt.plot(E)
-        # plt.show()
         Env2 = compressionSpectre(Env, 3)
-        # plt.figure()
-        # plt.plot(np.abs(T))
 
+        # plt.figure()
+        # plt.plot(np.linspace(0, 2*np.pi, len(Env)), np.abs(Env), label='Enveloppe Spectrale Originale')
+        # plt.plot(np.linspace(0, 2*np.pi, len(Env2)), np.abs(Env2), label='Enveloppe Spectrale Comprimée')
+        # plt.title("Comparaison des Enveloppes Spectrales pour une trame")
+        # plt.ylabel("Amplitude")
+        # plt.xlabel("Fréquence $\omega$ [rads]")
+        # plt.legend()
         # plt.show()
-        # E2 = enveloppeSpectrale(np.abs(T2), 10)
-        trames_traitees.append(np.fft.ifft(Env2 * (E / max(E)) * np.exp(1j * phase)).real)
-    plt.plot(np.abs(Env), label='env_ce')
-    plt.plot(np.abs(Env2), label='env2_ce')
+
+        trames_traitees.append(np.fft.ifft(Env2 * E * np.exp(1j * phase)).real)
 
     s = reconstruction_signal(trames_traitees, hop_len)
 
     # plt.figure()
-    # plt.plot((s * raw.max()) + np.mean(raw))
-    # plt.figure()
-    # plt.plot(np.abs(T))
-    # plt.plot(np.abs(Env))
+    # plt.plot(signal, label='Signal original')
+    # plt.plot(s, label='Signal restauré')
+    # plt.title("Comparaison des signaux temporels")
+    # plt.ylabel("Amplitude")
+    # plt.xlabel("Échantillon")
+    # plt.legend()
     # plt.show()
-    # x = s * raw.max() + np.mean(raw)
-    # signal_rehausse = overlappedDFT[range(0, len(overlappedDFT), 2)]
+
     write_wav_file(s * 4, 'sound_files/fft.wav', fs)
 
-    pass
+    return "I fart in your general direction"
 
 
 def compressionSpectreCentree(signal, steps=2):

@@ -15,7 +15,7 @@ if __name__ == '__main__':
     elif to_run == 4:
         laboratoire.num_4()
     elif to_run == 5:
-        app.rehaussement_du_signal('sound_files\\hel_fr1.wav')
+        app.rehaussement_du_signal('sound_files\\hel_fr2.wav')
     elif to_run == 7:
         app.conventional_noise_feedback_coding('sound_files\\hel_fr1.wav')
     elif to_run == 8:
