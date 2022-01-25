@@ -31,6 +31,7 @@ def open_wav_file(wfile: str):
         print('Wrong file type. Type accepted : .wav')
         return None, None
 
+
 def write_wav_file(data, wfile: str, fs: int):
     if wfile.endswith('.wav'):
         wavfile.write(wfile, fs, data)
@@ -68,10 +69,9 @@ def rehaussementDCT():
     signal = soustraire_moyenne(normalisation_signal(raw))
     frame_len, hop_len = 882, 441
     windowed_frames = trammeur_fenetreur(signal, frame_len, hop_len)
-    #s = reconstruction_signal(windowed_frames, hop_len)
+    # s = reconstruction_signal(windowed_frames, hop_len)
     trames_traitees = []
     for i, trame in enumerate(windowed_frames):
-
         T = scfft.dct(trame)
         neg = T < 0
         Env = enveloppeSpectreDCT(abs(T), 45)
@@ -80,22 +80,12 @@ def rehaussementDCT():
 
         trames_traitees.append(scfft.idct(Env2 * E))
 
-
     s = reconstruction_signal(trames_traitees, hop_len)
 
-    #print(E)
-    # plt.plot(s * max(raw))
-    # plt.figure()
-    # #plt.plot(E)
-    # plt.plot(Env)
-    # plt.plot(Env2)
-    # plt.show()
-
-    # signal_rehausse = overlappedDFT[range(0, len(overlappedDFT), 2)]
     write_wav_file(s, 'sound_files/dct.wav', fs)
 
-
-    pass
+    return "What is your name? Arthur Kings of the Britons. What is your quest? To seek the grail! What is the air " \
+           "speed velocity of an unladen swallow? What do you mean? african or european? Huh, I don't know that?! "
 
 
 def enveloppeSpectreDCT(amplitude_freqs: np.array, k: int = 10):
@@ -112,6 +102,7 @@ def compressionSpectreDCT(signal, steps=2):
     r[range(0, len(s))] = s
     return r
 
+
 def rehaussementDFT():
     # Analyse selon la technique
     # Extraction de paramètres (coefficient de transformée, coefficients de filtre prédicteurs, etc)
@@ -121,16 +112,16 @@ def rehaussementDFT():
     signal = soustraire_moyenne(normalisation_signal(raw))
     frame_len, hop_len = 882, 441
     windowed_frames = trammeur_fenetreur(signal, frame_len, hop_len)
-    #s = reconstruction_signal(windowed_frames, hop_len)
+    # s = reconstruction_signal(windowed_frames, hop_len)
     trames_traitees = []
     for i, trame in enumerate(windowed_frames):
-        #b, a = sc.butter(3, 10000/fs, btype='low', output='ba')
-        #trame = sc.filtfilt(b, a, trame)  # trame[range(hop_len, frame_len)] = 0
-        #print(trame)
+        # b, a = sc.butter(3, 10000/fs, btype='low', output='ba')
+        # trame = sc.filtfilt(b, a, trame)  # trame[range(hop_len, frame_len)] = 0
+        # print(trame)
         T = np.fft.fft(trame)
         phase = np.angle(T)
         Env = enveloppeSpectrale(np.abs(T), 45)
-       # print(len(T))
+        # print(len(T))
         E = np.abs(T) / Env
         # plt.figure()
         # plt.plot(E)
@@ -139,52 +130,49 @@ def rehaussementDFT():
         # plt.figure()
         # plt.plot(np.abs(T))
 
-
         # plt.show()
-        #E2 = enveloppeSpectrale(np.abs(T2), 10)
-        trames_traitees.append(np.fft.ifft(Env2 * (E/max(E)) * np.exp(1j * phase)).real)
+        # E2 = enveloppeSpectrale(np.abs(T2), 10)
+        trames_traitees.append(np.fft.ifft(Env2 * (E / max(E)) * np.exp(1j * phase)).real)
     plt.plot(np.abs(Env), label='env_ce')
     plt.plot(np.abs(Env2), label='env2_ce')
 
     s = reconstruction_signal(trames_traitees, hop_len)
 
-    #plt.figure()
+    # plt.figure()
     # plt.plot((s * raw.max()) + np.mean(raw))
     # plt.figure()
     # plt.plot(np.abs(T))
     # plt.plot(np.abs(Env))
     # plt.show()
-    #x = s * raw.max() + np.mean(raw)
+    # x = s * raw.max() + np.mean(raw)
     # signal_rehausse = overlappedDFT[range(0, len(overlappedDFT), 2)]
     write_wav_file(s * 4, 'sound_files/fft.wav', fs)
-
 
     pass
 
 
-
-
-def compressionSpectreCentree(signal, steps = 2):
+def compressionSpectreCentree(signal, steps=2):
     s = signal[range(0, len(signal), steps)]
     r = np.zeros(len(signal))
-    half_s = int(len(s)/2)
-    half_r = int(len(r)/2)
-    start = half_r-half_s
+    half_s = int(len(s) / 2)
+    half_r = int(len(r) / 2)
+    start = half_r - half_s
     end = start + len(s)
     r[range(start, end)] = s
     return r
 
-def compressionSpectre(signal, steps = 2):
+
+def compressionSpectre(signal, steps=2):
     # tmp = X[range(0, len(X), 2)]
     # X2 = np.zeros(len(X))
     # X2[range(0, int(len(tmp) / 2))] = tmp[range(0, int(len(tmp) / 2))]
     # X2[range(len(X) - int(len(tmp) / 2), len(X))] = tmp[range(int(len(tmp) / 2) + 1, len(tmp))]
     s = signal[range(0, len(signal), steps)]
     r = np.zeros(len(signal))
-    half_s = int(len(s)/2)
+    half_s = int(len(s) / 2)
     i = len(s) - half_s - half_s
     r[range(0, half_s)] = s[range(0, half_s)]
-    r[range(len(r)-half_s, len(r))] = s[range(half_s + i, len(s))]
+    r[range(len(r) - half_s, len(r))] = s[range(half_s + i, len(s))]
     return r
 
 
@@ -219,8 +207,8 @@ def trame_and_windowing(signal, window, out, nb_window, window_len):
 
 
 def detrame_add_window(trame_table, signal_complet, window_len):
-    for i in range(0, len(trame_table)-1):
-        lab.add_overlapping_window(trame_table[i], trame_table[i+1], signal_complet, window_len)
+    for i in range(0, len(trame_table) - 1):
+        lab.add_overlapping_window(trame_table[i], trame_table[i + 1], signal_complet, window_len)
 
 
 def zero_padding_debut_fin(signal, length1, length2):
@@ -228,7 +216,7 @@ def zero_padding_debut_fin(signal, length1, length2):
 
 
 def calcule_longueur_trame(fs, trame_length_ms):
-    return round(np.floor(fs*trame_length_ms/1000))
+    return round(np.floor(fs * trame_length_ms / 1000))
 
 
 def calcule_nombre_trame(signal, longueur_trame):
@@ -242,7 +230,7 @@ def enveloppeSpectrale(amplitude_spectre: np.array, k: int = 10):
     amp = np.abs(Y)
     indices = range(k, len(Y) - k + 2)
     amp[indices] = 0
-    return 10 ** (np.real(np.fft.ifft(amp * np.exp(1j * phase)))/20)
+    return 10 ** (np.real(np.fft.ifft(amp * np.exp(1j * phase))) / 20)
 
 
 def extractionFondamentales(amplitude_spectre: np.array, threshold: float = 0.5):
@@ -274,35 +262,38 @@ def preparation_du_signal(fpath):
 
 def rehaussementLPC():
     fs, raw = open_wav_file("sound_files/hel_fr2.wav")
-    signal = soustraire_moyenne(normalisation_signal(raw))
+    signal = soustraire_moyenne(normalisation_signal(raw))  # pretraitement du signal (normalisation retrait de la dc)
     frame_len, hop_len = 882, 441
-    windowed_frames = trammeur_fenetreur(signal, frame_len, hop_len)
+    windowed_frames = trammeur_fenetreur(signal, frame_len, hop_len)  # Fenetrage par methode Overlap-Add / Hanning
+
     trames_traitees = []
     for i, trame in enumerate(windowed_frames):
-        a = librosa.lpc(np.array(trame), 60)
-        E_n = sc.lfilter(a, 1, trame)
-        E_w = np.fft.fft(E_n)
+        a = librosa.lpc(np.array(trame), 60)  # Extraction des coefficients de l'erreur
+        E_n = sc.lfilter(a, 1, trame)  # Filtrage du signal pour obtenir l'excitation
+        E_w = np.fft.fft(E_n)  # composante frequentielle de l'excitation
         E_w_amp = np.abs(E_w)
         E_w_phase = np.angle(E_w)
-        [_, enveloppe] = sc.freqz(1, a, frame_len//2)
+        [_, enveloppe] = sc.freqz(1, a, frame_len // 2)  # Extraction de l'enveloppe
 
-        frequence_reponse_frequence = np.abs(np.fft.fft(enveloppe))
-        frequence_reponse_frequence = normalisation_signal(frequence_reponse_frequence)
-        coefficient_enveloppe = librosa.lpc(frequence_reponse_frequence, 25)
-        [_, enveloppe_reponse_frequence] = sc.freqz(1, coefficient_enveloppe, hop_len)
-        enveloppe_reponse_frequence = compressionSpectreDCT(enveloppe_reponse_frequence, 3)
-        enveloppe_reponse_frequence = np.concatenate((enveloppe_reponse_frequence, np.flipud(enveloppe_reponse_frequence)))
+        frequence_reponse_frequence = np.abs(np.fft.fft(enveloppe))  # FFT de l'enveloppe
+        frequence_reponse_frequence = normalisation_signal(frequence_reponse_frequence)  # Normalisation
+        coefficient_enveloppe = librosa.lpc(frequence_reponse_frequence, 25)  # Coefficient de l'erreur de l'enveloppe
+        [_, enveloppe_reponse_frequence] = sc.freqz(1, coefficient_enveloppe, hop_len)  # Enveloppe de la reponse en frequence
+        enveloppe_reponse_frequence = compressionSpectreDCT(enveloppe_reponse_frequence, 3)  # Compression du spectre
+        enveloppe_reponse_frequence = np.concatenate((enveloppe_reponse_frequence, np.flipud(enveloppe_reponse_frequence)))  # Sur 0 2pi complet
 
-        trames_traitees.append(np.fft.ifft(enveloppe_reponse_frequence * E_w_amp * np.exp(1j * np.angle(np.fft.fft(trame)))).real)
+        trames_traitees.append(np.fft.ifft(enveloppe_reponse_frequence * E_w_amp * np.exp(1j * np.angle(np.fft.fft(trame)))).real)  # Application de l'enveloppe sur l'excitation
 
-    s = reconstruction_signal(trames_traitees, hop_len)
+    s = reconstruction_signal(trames_traitees, hop_len)  # Defenetrage
 
     s = normalisation_signal(s)
+    # Debruitage
     i = np.abs(s) > 0.01
     s = s * i
 
     fig, (ax1, ax2) = plt.subplots(1, 2)
-    ax1.stem(np.linspace(0, np.pi * 2, len(signal)), normalisation_signal(np.abs(np.fft.fft(signal))), label='Signal original')
+    ax1.stem(np.linspace(0, np.pi * 2, len(signal)), normalisation_signal(np.abs(np.fft.fft(signal))),
+             label='Signal original')
     ax2.stem(np.linspace(0, np.pi * 2, len(s)), normalisation_signal(np.abs(np.fft.fft(s))), label='Signal rehaussé')
     ax1.set_title('Réponse en fréquence du signal original')
     ax2.set_title('Réponse en fréquence du signal rehaussé')
@@ -323,32 +314,14 @@ def rehaussementLPC():
     write_wav_file(s, 'sound_files/lpc_close_enough_v_eric.wav', fs)
     return "What is the airspeed velocity of an unladen swallow?"
 
-
-def compression_sans_perte():  # QMF
-    return 2
-
-
 def rehaussement_du_signal(file_path: str):
-    # Extraction du signal
-    fs, signal_fenetre, longueur_trame = preparation_du_signal(file_path)
-    # ---Acquisition des paramètres---
-
-    # À faire pour chaque:
-    # Analyse selon la technique
-    # Extraction de paramètres (coefficient de transformée, coefficients de filtre prédicteurs, etc)
-    # Modification des paramètres => Permet de retrouvée une ENVELOPPE SPECTRALE comprimée d'un facteur 2 à 3
-    # Aucun changement sur la position des harmoniques du signal d'origine
-    #
-
-    # Par approche LPC : Modélisation de l'enveloppe à l'aide d'un filtre adaptatif à prédiction linéaire
     rehaussementLPC()
-    # Par approche DFT/FFT : Décomposition fréquentielle
-    # rehaussementDFT()      #fs, signal_fenetre, longueur_trame)
-    # Par approche DCT : Décomposition fréquentielle
-    # rehaussementDCT()
-    # ---Acquisition des paramètres---
+    rehaussementDFT()
+    rehaussementDCT()
 
-    return "app"
+    return "First shalt thou take out the Holy Pin. Then shalt thou count to three, no more, no less. Three shall be " \
+           "the number thou shalt count, and the number of the counting shall be three. Four shalt thou not count, " \
+           "neither count thou two, excepting that thou then proceed to three. "
 
 
 def qmf(file_path: str):
@@ -357,74 +330,75 @@ def qmf(file_path: str):
     :param file_path: Input signal
     :return: Synthesized signal
     """
-    #coeff = [0.00938715, 0.06942827, -0.07065183, 0.48998080, 0.48998080, -0.07065183, 0.06942827, 0.00938715]
+    # coeff = [0.00938715, 0.06942827, -0.07065183, 0.48998080, 0.48998080, -0.07065183, 0.06942827, 0.00938715]
     coeff = [0.002898163, -0.009972252, -0.001920936, 0.03596853, -0.01611869, -0.09530234, 0.1067987, 0.4773469,
              0.4773469, 0.1067987, -0.09530234, -0.01611869, 0.03596853, -0.001920936, -0.009972252, 0.002898163]
     h_pb = coeff
-    h_ph = [((-1)**i)*coeff[i] for i in range(len(h_pb))]
+    h_ph = [((-1) ** i) * coeff[i] for i in range(len(h_pb))]
     fs, input_signal = open_wav_file(file_path)
-    #input_signal_freq = np.fft.fft(input_signal)
     signal_pb = sc.lfilter(h_pb, 1, input_signal)
     signal_pb_freq = np.fft.fft(signal_pb)
     signal_ph = sc.lfilter(h_ph, 1, input_signal)
     signal_ph_freq = np.fft.fft(signal_ph)
     fig, (ax1) = plt.subplots(1, 1)
-    ax1.plot(np.linspace(0, np.pi * 2, len(signal_ph_freq)), signal_ph_freq / max(signal_ph_freq), 'r', label='Passe-haut')
-    ax1.plot(np.linspace(0, np.pi * 2, len(signal_pb_freq)), signal_pb_freq/max(signal_pb_freq), label='Passe-bas')
+    ax1.plot(np.linspace(0, np.pi * 2, len(signal_ph_freq)), signal_ph_freq / max(signal_ph_freq), 'r',
+             label='Passe-haut')
+    ax1.plot(np.linspace(0, np.pi * 2, len(signal_pb_freq)), signal_pb_freq / max(signal_pb_freq), label='Passe-bas')
     ax1.set_ylabel('Amplitude')
     ax1.set_xlabel('Fréquence $\omega$ [rads]')
     ax1.set_title("Signal séparé en sous-bandes")
-    #ax2.set_title("Passe haut")
+    # ax2.set_title("Passe haut")
     plt.legend()
     plt.show()
-    #Down sampling
+    # Down sampling
     signal_pb_downsampled = signal_pb[range(0, len(signal_pb), 2)]
     signal_ph_downsampled = signal_pb[range(0, len(signal_ph), 2)]
-    #Synthetize signal
+    # Synthetize signal
     signal_pb_synth = conventional_noise_feedback_coding(signal_pb_downsampled, 3)
     signal_ph_synth = conventional_noise_feedback_coding(signal_ph_downsampled, 3)
-    return 2
+    return "If she weighs the same as a duck... she's made of wood!"
 
 
 def conventional_noise_feedback_coding(in_signal, n_bits):
     # Codage avec boucle de retroaction de bruit
     # Step by step
-    #fs, input_signal = open_wav_file(file_path)
+    # fs, input_signal = open_wav_file(file_path)
     input_signal = in_signal
-    input_signal = input_signal/max(input_signal)
-    input_signal = input_signal-np.mean(input_signal)
+    input_signal = input_signal / max(input_signal)
+    input_signal = input_signal - np.mean(input_signal)
     output_signal = []
     quantization_error = []
     prediction_error = []
     window_size = 882
     order = 15
     alpha = 0.8
-    u_n = 0     # Quantizer input (single sample)
-    uq_n = 0    # Quantizer output (single sample)
-    q_n = collections.deque(maxlen=order+1)    # Noise feedback Filter input (Sample buffer of 'order' length)
-    f_n = [0]     # Noise feedback Filter output (single sample)
+    u_n = 0  # Quantizer input (single sample)
+    uq_n = 0  # Quantizer output (single sample)
+    q_n = collections.deque(maxlen=order + 1)  # Noise feedback Filter input (Sample buffer of 'order' length)
+    f_n = [0]  # Noise feedback Filter output (single sample)
     # 1 - Frame by Frame (20 ms)
     for i in range(0, len(input_signal), window_size):
         trame = input_signal[i:i + window_size].astype('float')
         prediction_error, error_coefficients = get_prediction_error(trame, ordre=order)
         sq_n = []  # Output array
-        #fig1 = plt.axes()
-        #fig1.plot(trame)
-        #fig1.plot(prediction_error, '--r', linewidth=1.0)
-        #fig1.set_title('Erreur de prediction')
-        #coefficients = librosa.lpc(prediction_error, order=order) / alpha
+        # fig1 = plt.axes()
+        # fig1.plot(trame)
+        # fig1.plot(prediction_error, '--r', linewidth=1.0)
+        # fig1.set_title('Erreur de prediction')
+        # coefficients = librosa.lpc(prediction_error, order=order) / alpha
         quantize_range = get_quantize_range(prediction_error, n_bits)
-        noise_feedback_coefficients = librosa.lpc(np.array(trame).astype('float'), order=order) #* alpha #Coefficients remain the same for a whole trame
+        noise_feedback_coefficients = librosa.lpc(np.array(trame).astype('float'),
+                                                  order=order)  # * alpha #Coefficients remain the same for a whole trame
         for k in range(len(noise_feedback_coefficients)):
-            noise_feedback_coefficients[k] = noise_feedback_coefficients[k]*(alpha**k)
+            noise_feedback_coefficients[k] = noise_feedback_coefficients[k] * (alpha ** k)
         # Avoir 'ordre' echantillons avant de calculer les coefficients du filtre de feedback.
         for j in range(len(prediction_error)):
             u_n = prediction_error[j] + f_n[0]
             uq_n = quantize_sample(u_n, quantize_range)
-            #q_n = [u_n - uq_n]
+            # q_n = [u_n - uq_n]
             q_n.append(u_n - uq_n)
             if len(q_n) == q_n.maxlen:
-                #Noise Feedback Filter
+                # Noise Feedback Filter
                 f_n = sc.lfilter(noise_feedback_coefficients, 1, q_n)
             sq_n.append(uq_n)
         output_trame = get_output_trame(sq_n, coefficients=error_coefficients)
@@ -436,7 +410,7 @@ def conventional_noise_feedback_coding(in_signal, n_bits):
         fig.set_ylabel('Amplitude')
         fig.legend()
 
-    return 2
+    return "We are the Knights who say.....NI!"
 
 
 def get_noise_feedback(buffer, coefficients, ordre, constante):
@@ -448,8 +422,8 @@ def get_noise_feedback(buffer, coefficients, ordre, constante):
     :param constante: Value given in Annex C "Noise Feedback Coding"
     :return:
     """
-    #error_coefficients = librosa.lpc(np.array(window).astype('float'), order=ordre) / constante
-    #coefficients = -error_coefficients[1:]
+    # error_coefficients = librosa.lpc(np.array(window).astype('float'), order=ordre) / constante
+    # coefficients = -error_coefficients[1:]
     noise_feedback = sc.lfilter(coefficients, 1, buffer)
     return noise_feedback
 
@@ -463,7 +437,7 @@ def get_quantize_range(in_trame, n_bits):
     """
     in_min = np.min(in_trame)
     in_max = np.max(in_trame)
-    out_possible_values = np.linspace(start=in_min, stop=in_max, num=((2**n_bits) - 1))
+    out_possible_values = np.linspace(start=in_min, stop=in_max, num=((2 ** n_bits) - 1))
     return out_possible_values
 
 
@@ -473,17 +447,17 @@ def get_prediction_error(in_trame, ordre):
     :param in_trame: 20 ms trame (ndarray)
     :return: 20 ms prediction error trame and prediction error coefficients.
     """
-    #Is the error simply the signal being predicted, or is it the difference -> in - predicted
+    # Is the error simply the signal being predicted, or is it the difference -> in - predicted
     prediction_error_coefficients = librosa.lpc(in_trame, order=ordre)
     prediction_error = sc.lfilter(prediction_error_coefficients, 1, in_trame)
-    #_, i_inverse_enveloppe = sc.freqz(1, prediction_error_coefficients, len(in_trame)//2)
-    #i_inverse_enveloppe = i_inverse_enveloppe/max(i_inverse_enveloppe)
-    #fft_trame = np.fft.fft(in_trame)
-    #fft_trame = fft_trame/max(fft_trame)
-    #plt.figure()
-    #plt.plot(np.abs(fft_trame))
-    #plt.plot(i_inverse_enveloppe, '--r', linewidth=1.0)
-    #prediction_error = in_trame - predicted_signal
+    # _, i_inverse_enveloppe = sc.freqz(1, prediction_error_coefficients, len(in_trame)//2)
+    # i_inverse_enveloppe = i_inverse_enveloppe/max(i_inverse_enveloppe)
+    # fft_trame = np.fft.fft(in_trame)
+    # fft_trame = fft_trame/max(fft_trame)
+    # plt.figure()
+    # plt.plot(np.abs(fft_trame))
+    # plt.plot(i_inverse_enveloppe, '--r', linewidth=1.0)
+    # prediction_error = in_trame - predicted_signal
     return prediction_error, prediction_error_coefficients
 
 
@@ -493,29 +467,29 @@ def get_output_trame(in_trame, coefficients):
 -    :param in_trame: 20 ms trame (ndarray) - Output of quantizer
     :return: 20 ms output signal trame
     """
-    #prediction_error_coefficients = librosa.lpc(np.array(in_trame), order=ordre)
-    #prediction_error_coefficients = -prediction_error_coef+ficients[1:]
-    #out_trame = sc.lfilter(1, coefficients, in_trame) #TODO: FIX THIS
+    # prediction_error_coefficients = librosa.lpc(np.array(in_trame), order=ordre)
+    # prediction_error_coefficients = -prediction_error_coef+ficients[1:]
+    # out_trame = sc.lfilter(1, coefficients, in_trame) #TODO: FIX THIS
     out_trame = sc.lfilter(coefficients, 1, in_trame)  # TODO: FIX THIS
-    #FFT SIGNAL -> DOMAIN FREQUENTIEL
-    #FREQZ avec Coefficients erreur
-    #Multiplication entre signal en frequence et reponse en frequences du filtre.
-    #in_trame_freq = np.fft.fft(in_trame)
-    #_, half_inverse_filter_freq_response = sc.freqz(b=1, a=prediction_error_coefficients, worN=len(in_trame_freq)//2)
-    #inverse_filter_freq_response = np.concatenate((half_inverse_filter_freq_response, np.flipud(half_inverse_filter_freq_response)))
-    #fig = plt.figure()
-    #fig.stem(in_trame_freq)
+    # FFT SIGNAL -> DOMAIN FREQUENTIEL
+    # FREQZ avec Coefficients erreur
+    # Multiplication entre signal en frequence et reponse en frequences du filtre.
+    # in_trame_freq = np.fft.fft(in_trame)
+    # _, half_inverse_filter_freq_response = sc.freqz(b=1, a=prediction_error_coefficients, worN=len(in_trame_freq)//2)
+    # inverse_filter_freq_response = np.concatenate((half_inverse_filter_freq_response, np.flipud(half_inverse_filter_freq_response)))
+    # fig = plt.figure()
+    # fig.stem(in_trame_freq)
 
-    #fig, (ax1, ax2) = plt.subplots(1, 2)
-    #ax1.stem(in_trame_freq)
-    #ax2.stem(inverse_filter_freq_response)
-    #ax1.legend(['Input'])
-    #ax2.legend(['Fitler reponse'])
-    #plt.show()
+    # fig, (ax1, ax2) = plt.subplots(1, 2)
+    # ax1.stem(in_trame_freq)
+    # ax2.stem(inverse_filter_freq_response)
+    # ax1.legend(['Input'])
+    # ax2.legend(['Fitler reponse'])
+    # plt.show()
 
-    #out_trame_freq = in_trame_freq * inverse_filter_freq_response
-    #out_trame = np.real(np.fft.ifft(out_trame_freq))
-    #out_trame = in_trame + predicted_signal
+    # out_trame_freq = in_trame_freq * inverse_filter_freq_response
+    # out_trame = np.real(np.fft.ifft(out_trame_freq))
+    # out_trame = in_trame + predicted_signal
     return out_trame
 
 
