@@ -397,11 +397,30 @@ def qmf(file_path: str):
     signal_ph_freq = np.fft.fft(signal_ph)
     # Down sample each band -> Keep every 1/2 sample
     signal_pb_downsampled = signal_pb[range(0, len(signal_pb), 2)]
-    signal_ph_downsampled = signal_pb[range(0, len(signal_ph), 2)]
+    signal_ph_downsampled = signal_ph[range(0, len(signal_ph), 2)]
     # Synthetize signal
     signal_pb_synth = conventional_noise_feedback_coding(signal_pb_downsampled, 3)
     signal_ph_synth = conventional_noise_feedback_coding(signal_ph_downsampled, 3)
+    #TODO:Upsampling
+    signal_pb_synth = upsample(signal_pb_synth)
+    signal_ph_synth = upsample(signal_ph_synth)
+    # 2nd and final filtering
+    signal_pb_pb_synth = sc.lfilter(h_pb, 1, signal_pb_synth)
+    signal_ph_ph_synth = sc.lfilter(h_ph, 1, signal_ph_synth)
+    # Output signal
+    output_signal = signal_pb_pb_synth + signal_ph_ph_synth
+    write_wav_file(output_signal, 'sound_files/qmf.wav', fs)
     return 2
+
+
+def upsample(buffer):
+    """
+    :param buffer: Buffer to upsamle
+    :return: upsampled buffer
+    """
+    result = [0] * (len(buffer) * 2 - 1)
+    result[0::2] = buffer
+    return result
 
 
 def conventional_noise_feedback_coding(in_signal, n_bits):
@@ -409,7 +428,7 @@ def conventional_noise_feedback_coding(in_signal, n_bits):
     Code signal using convetional noise feedback
     :param in_signal: input signal to code
     :param n_bits: number of bits to quantize signal
-    :return:
+    :return: Output signal
     """
     input_signal = in_signal
     input_signal = input_signal/max(input_signal)
@@ -443,14 +462,15 @@ def conventional_noise_feedback_coding(in_signal, n_bits):
                 f_n = sc.lfilter(noise_feedback_coefficients, 1, q_n)
             sq_n.append(uq_n)
         output_trame = get_output_trame(sq_n, coefficients=error_coefficients)
-        fig = plt.axes()
-        fig.plot(prediction_error, label='Erreur de prédiction')
-        fig.plot(sq_n, '--r', linewidth=1.0, label='Erreur de prédiction quantifiée')
-        fig.set_title('Quantificateur')
-        fig.set_xlabel('n')
-        fig.set_ylabel('Amplitude')
-        fig.legend()
-    return 2
+        output_signal.extend(output_trame)
+        #fig = plt.axes()
+        #fig.plot(prediction_error, label='Erreur de prédiction')
+        #fig.plot(sq_n, '--r', linewidth=1.0, label='Erreur de prédiction quantifiée')
+        #fig.set_title('Quantificateur')
+        #fig.set_xlabel('n')
+        #fig.set_ylabel('Amplitude')
+        #fig.legend()
+    return output_signal
 
 
 def get_noise_feedback(buffer, coefficients, ordre, constante):
